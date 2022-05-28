@@ -4,6 +4,10 @@
 
 - [API Link](https://developer.marvel.com/)
 
+
+https://user-images.githubusercontent.com/45641833/170819079-9a13fceb-1132-4691-8934-bbb8512f77d7.mp4
+
+
 ## Subject:
 
 - **BLoC/Cubit** was used for State Management.
