@@ -1,15 +1,17 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:marvel_app/core/constant/router_constant.dart';
 import 'package:marvel_app/core/constant/text_constant.dart';
 import 'package:marvel_app/core/extensions/context_extension.dart';
 import 'package:marvel_app/view/detail_view/screen_args.dart';
 
-import '../../core/base/model/characters_model.dart';
-import '../../core/constant/url_constant.dart';
-import 'package:http/http.dart' as http;
+import '../../core/base/cubit/characters/characters_cubit.dart';
+import '../../core/base/cubit/home/home_cubit.dart';
+import '../../core/base/repository/characters_repository/characters_repository.dart';
+
+
+import '../../core/utils/locator.dart';
 
 class HomeView extends StatefulWidget {
   const HomeView({Key? key}) : super(key: key);
@@ -19,149 +21,106 @@ class HomeView extends StatefulWidget {
 }
 
 class _HomeViewState extends State<HomeView> {
-  final urlCharacters = "${UrlConstant.CHARACTERS_URL}";
-
-  List<CharactersModel> marvelCharacters = [];
-  int limit = 30;
-  int maxLength = 100;
-  late ScrollController scrollController;
-  bool isLoading = false;
-  bool hasMore = true;
-
-  getPagination() async {
-    setState(() {
-      isLoading = true;
-    });
-    final response = await http.get(
-      Uri.parse("$urlCharacters&limit=$limit"),
-    );
-
-    final jsonBody = jsonDecode(response.body);
-
-    print("BODY: ${jsonBody}");
-    if (response.statusCode == 200) {
-      List<CharactersModel> characterssList = List<CharactersModel>.from(
-          jsonBody["data"]["results"]
-              .map((model) => CharactersModel.fromJson(model)));
-      marvelCharacters = characterssList;
-      marvelCharacters;
-    } else {
-      [];
-    }
-
-    setState(() {
-      isLoading = false;
-      limit = limit + 30;
-      hasMore = marvelCharacters.length < maxLength;
-    });
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    getPagination();
-    scrollController = ScrollController();
-    scrollController.addListener(() {
-      if (scrollController.position.pixels >=
-              scrollController.position.maxScrollExtent * 0.95 &&
-          !isLoading) {
-        if (hasMore) {
-          getPagination();
-        }
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    scrollController.dispose();
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-            appBar: buildAppBar(),
-      body: buildBody(),
+      appBar: buildAppBar(),
+      body: MultiBlocProvider(
+          providers: [
+            BlocProvider.value(value: context.read<HomeCubit>()..init()),
+          ],
+          child: BlocBuilder<CharactersCubit, CharactersState>(
+            builder: (context, state) {
+              if (state is CharactersLoading) {
+                return const Center(
+                  child: CircularProgressIndicator(),
+                );
+              } else {
+                return buildBody();
+              }
+            },
+          )),
     );
   }
 
   ListView buildBody() {
     return ListView.separated(
       separatorBuilder: ((context, index) => context.sizedBoxLowVertical),
-      itemCount: marvelCharacters.length + (hasMore ? 1 : 0),
-      controller: scrollController,
+      itemCount: sl<CharactersCubit>().marvelCharacters.length +
+          (sl<HomeCubit>().hasMore ? 1 : 0),
+      controller: sl<HomeCubit>().scrollController,
       itemBuilder: (context, index) {
-    if (index == marvelCharacters.length) {
-      return limit > 100
-          ? buildSeenThemAllText()
-          : buildCircularProgressIndicator();
-    } else {
-      return GestureDetector(
-        onTap: () {
-          Navigator.pushNamed(context, RouteConstant.DETAIL_VIEW,
-              arguments: ScreenArgumentsDetail(
-                charactersModel: marvelCharacters[index],
-                comicsModel: marvelCharacters[index].comics!.items
-              ));
-        },
-        child: buildCard(index, context),
-      );
-    }
+        if (index == sl<CharactersCubit>().marvelCharacters.length) {
+          return sl<SampleCharactersRepository>().limit > 100
+              ? buildSeenThemAllText()
+              : buildCircularProgressIndicator();
+        } else {
+          return GestureDetector(
+            onTap: () {
+              Navigator.pushNamed(context, RouteConstant.DETAIL_VIEW,
+                  arguments: ScreenArgumentsDetail(
+                      charactersModel:
+                          sl<CharactersCubit>().marvelCharacters[index],
+                      comicsModel: sl<CharactersCubit>()
+                          .marvelCharacters[index]
+                          .comics!
+                          .items));
+            },
+            child: buildCard(index, context),
+          );
+        }
       },
     );
   }
 
   Center buildCircularProgressIndicator() {
-    return Center(
-            child: const CircularProgressIndicator(),
-          );
+    return const Center(
+      child: CircularProgressIndicator(),
+    );
   }
 
   Text buildSeenThemAllText() {
-    return Text(
-            TextConstants.youSeenThemAll,
-            textAlign: TextAlign.center,
-          );
+    return const Text(
+      TextConstants.youSeenThemAll,
+      textAlign: TextAlign.center,
+    );
   }
 
   Container buildCard(int index, BuildContext context) {
     return Container(
-        height: 400.h,
-        alignment: Alignment.center,
-        child: Column(
-          children: [
-            buildImage(index),
-            context.sizedBoxLowVertical,
-            buildCharactersName(index)
-          ],
-        ),
-        decoration: BoxDecoration(
-            color: Colors.tealAccent,
-            borderRadius: context.bordernormalRadius),
-      );
+      height: 400.h,
+      alignment: Alignment.center,
+      child: Column(
+        children: [
+          buildImage(index),
+          context.sizedBoxLowVertical,
+          buildCharactersName(index)
+        ],
+      ),
+      decoration: BoxDecoration(
+          color: Colors.tealAccent, borderRadius: context.bordernormalRadius),
+    );
   }
 
   Text buildCharactersName(int index) {
     return Text(
-            "${marvelCharacters[index].name}",
-            style:
-                TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-          );
+      "${sl<CharactersCubit>().marvelCharacters[index].name}",
+      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+    );
   }
 
   Image buildImage(int index) {
     return Image.network(
-            "${marvelCharacters[index].thumbnail!.path}"
-            ".${marvelCharacters[index].thumbnail!.extension}",
-            height: 350.h,
-          );
+      "${sl<CharactersCubit>().marvelCharacters[index].thumbnail!.path}"
+      ".${sl<CharactersCubit>().marvelCharacters[index].thumbnail!.extension}",
+      height: 350.h,
+    );
   }
 
   AppBar buildAppBar() {
     return AppBar(
-                automaticallyImplyLeading: false,
-      title: Text(TextConstants.appBarTitle),
+      automaticallyImplyLeading: false,
+      title: const Text(TextConstants.appBarTitle),
     );
   }
 }

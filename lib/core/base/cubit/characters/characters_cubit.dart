@@ -11,11 +11,12 @@ class CharactersCubit extends Cubit<CharactersState> {
   CharactersCubit(this._sampleCharactersRepository) : super(CharactersInital());
 
   List<CharactersModel> marvelCharacters = [];
+  int maxLength = 100;
 
-  Future getMarvelCharacters(int limit) async {
+  Future getMarvelCharacters() async {
     try {
       final response =
-          await _sampleCharactersRepository.getMarvelCharacters(limit);
+          await _sampleCharactersRepository.getMarvelCharacters();
       marvelCharacters = response;
 
       emit(CharactersCompleted(response));
@@ -23,5 +24,7 @@ class CharactersCubit extends Cubit<CharactersState> {
       emit(CharactersError(e.message, e.statusCode));
     }
   }
+
+  
 
 }
