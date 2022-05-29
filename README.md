@@ -20,7 +20,8 @@ https://user-images.githubusercontent.com/45641833/170819079-9a13fceb-1132-4691-
 
 - For pagination and infinite Scroll, **Infinite Scroll Pagination** was used.
 
-### BloC/Cubit
+## BLoC/Cubit:
+
 **Characters Cubit:**
 ```dart
 class CharactersCubit extends Cubit<CharactersState> {
@@ -102,9 +103,6 @@ class CharactersCubit extends Cubit<CharactersState> {
         if (hasMore) {
           await  sl<SampleCharactersRepository>().getPagination();
           await  sl<CharactersCubit>().getMarvelCharacters();
-            
-             
-
         }
       }
     });
